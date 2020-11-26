@@ -55,9 +55,7 @@ INSERT INTO users (
   $1, $2, $3)
   RETURNING *;
 `, [user.name, user.email, user.password])
-.then(res => {
-   res.rows[0]
-})
+.then(res => res.rows[0])
 }
 exports.addUser = addUser;
 
@@ -69,8 +67,20 @@ exports.addUser = addUser;
  * @return {Promise<[{}]>} A promise to the reservations.
  */
 const getAllReservations = function(guest_id, limit = 10) {
-  return getAllProperties(null, 2);
-}
+  return pool.query(`
+  SELECT reservations.*, properties.*, AVG(property_reviews.rating) AS average_rating
+  FROM RESERVATIONS
+  JOIN properties ON reservations.PROPERTY_ID = properties.id
+  JOIN PROPERTY_REVIEWS ON properties.id = property_reviews.property_id
+  WHERE reservations.GUEST_ID = $1
+  AND reservations.end_date < now()::date
+  GROUP BY properties.id, reservations.id 
+  ORDER BY reservations.start_date
+  LIMIT 10;
+  `,[guest_id])
+  .then(res => res.rows)
+};
+
 exports.getAllReservations = getAllReservations;
 
 /// Properties
